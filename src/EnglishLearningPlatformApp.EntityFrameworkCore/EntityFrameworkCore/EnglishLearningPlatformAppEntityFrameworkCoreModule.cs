@@ -14,6 +14,9 @@ using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using Volo.Abp.Studio;
+using EnglishLearningPlatformApp.Content;
+using Microsoft.EntityFrameworkCore;
+using Volo.Abp.EntityFrameworkCore.DependencyInjection;
 
 namespace EnglishLearningPlatformApp.EntityFrameworkCore;
 
@@ -45,6 +48,14 @@ public class EnglishLearningPlatformAppEntityFrameworkCoreModule : AbpModule
                 /* Remove "includeAllEntities: true" to create
                  * default repositories only for aggregate roots */
             options.AddDefaultRepositories(includeAllEntities: true);
+        });
+
+        Configure<AbpEntityOptions>(options =>
+        {
+            options.Entity<ContentItem>(contentOptions =>
+            {
+                contentOptions.DefaultWithDetailsFunc = query => query.Include(x => x.Versions);
+            });
         });
 
         if (AbpStudioAnalyzeHelper.IsInAnalyzeMode)

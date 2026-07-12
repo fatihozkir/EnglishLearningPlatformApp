@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using EnglishLearningPlatformApp.Authors;
 using EnglishLearningPlatformApp.Books;
+using EnglishLearningPlatformApp.Content;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -32,6 +33,8 @@ public class EnglishLearningPlatformAppDbContext :
     public DbSet<Author> Authors { get; set; }
 
     public DbSet<Book> Books { get; set; }
+    public DbSet<ContentItem> ContentItems { get; set; }
+    public DbSet<ContentVersion> ContentVersions { get; set; }
 
     #region Entities from the modules
 
@@ -100,6 +103,25 @@ public class EnglishLearningPlatformAppDbContext :
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Name).IsRequired().HasMaxLength(128);
             b.HasOne<Author>().WithMany().HasForeignKey(x => x.AuthorId).IsRequired();
+        });
+
+        builder.Entity<ContentItem>(b =>
+        {
+            b.ToTable(EnglishLearningPlatformAppConsts.DbTablePrefix + "ContentItems", EnglishLearningPlatformAppConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.HasMany(x => x.Versions).WithOne().HasForeignKey(x => x.ContentItemId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Versions).UsePropertyAccessMode(PropertyAccessMode.Field);
+            b.HasIndex(x => new { x.TenantId, x.Status });
+        });
+
+        builder.Entity<ContentVersion>(b =>
+        {
+            b.ToTable(EnglishLearningPlatformAppConsts.DbTablePrefix + "ContentVersions", EnglishLearningPlatformAppConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Title).IsRequired().HasMaxLength(ContentConsts.MaxTitleLength);
+            b.HasIndex(x => new { x.ContentItemId, x.VersionNumber }).IsUnique();
+            b.HasIndex(x => x.ContentItemId).IsUnique().HasFilter("[Lifecycle] = 0");
+            b.HasIndex(x => new { x.TenantId, x.Lifecycle });
         });
 
         /* Configure your own tables/entities inside here */

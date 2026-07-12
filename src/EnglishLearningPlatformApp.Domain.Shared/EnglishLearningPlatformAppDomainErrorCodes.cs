@@ -2,5 +2,8 @@
 
 public static class EnglishLearningPlatformAppDomainErrorCodes
 {
-    /* You can add your business exception error codes here, as constants */
+    public const string ContentArchived = "EnglishLearningPlatformApp:ContentArchived";
+    public const string ContentDraftMissing = "EnglishLearningPlatformApp:ContentDraftMissing";
+    public const string ContentDraftAlreadyExists = "EnglishLearningPlatformApp:ContentDraftAlreadyExists";
+    public const string ContentVersionImmutable = "EnglishLearningPlatformApp:ContentVersionImmutable";
 }
