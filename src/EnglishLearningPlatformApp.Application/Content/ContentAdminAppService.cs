@@ -114,6 +114,54 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         return Map(item);
     }
 
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> AddSectionAsync(Guid id, AddContentSectionInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        item.AddSection(GuidGenerator.Create(), input.Heading, input.Body);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> UpdateSectionAsync(Guid id, Guid sectionId, UpdateContentSectionInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        item.UpdateSection(sectionId, input.Heading, input.Body);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> RemoveSectionAsync(Guid id, Guid sectionId, ContentConcurrencyInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        item.RemoveSection(sectionId);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> ReorderSectionsAsync(Guid id, ReorderContentSectionsInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        item.ReorderSections(input.SectionIds);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
     private Task<ContentItem> GetItemAsync(Guid id) => _repository.GetAsync(id, includeDetails: true);
 
     private static void CheckConcurrency(ContentItem item, string expectedStamp)
@@ -155,7 +203,16 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         VersionNumber = version.VersionNumber,
         Title = version.Title,
         Lifecycle = version.Lifecycle,
-        PublishedAt = version.PublishedAt
+        PublishedAt = version.PublishedAt,
+        Sections = version.Sections.OrderBy(x => x.Position).Select(Map).ToList()
+    };
+
+    private static ContentSectionDto Map(ContentSection section) => new()
+    {
+        Id = section.Id,
+        Position = section.Position,
+        Heading = section.Heading,
+        Body = section.Body
     };
 
     private static PublishedContentVersionDto MapPublished(ContentItem item, ContentVersion version) => new()
@@ -165,6 +222,14 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         Type = item.Type,
         VersionNumber = version.VersionNumber,
         Title = version.Title,
-        PublishedAt = version.PublishedAt!.Value
+        PublishedAt = version.PublishedAt!.Value,
+        Sections = version.Sections.OrderBy(x => x.Position).Select(MapPublished).ToList()
+    };
+
+    private static PublishedContentSectionDto MapPublished(ContentSection section) => new()
+    {
+        Position = section.Position,
+        Heading = section.Heading,
+        Body = section.Body
     };
 }

@@ -164,7 +164,11 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
     public void Published_Contract_Should_Not_Expose_Answer_Or_Grading_Fields()
     {
         var forbiddenFragments = new[] { "answer", "correct", "solution", "grading", "score" };
-        var propertyNames = typeof(PublishedContentVersionDto).GetProperties().Select(x => x.Name).ToList();
+        var propertyNames = new[] { typeof(PublishedContentVersionDto), typeof(PublishedContentSectionDto) }
+            .SelectMany(type => type.GetProperties()).Select(property => property.Name).ToList();
+
+        typeof(PublishedContentSectionDto).GetProperties().Select(x => x.Name)
+            .ShouldBe(new[] { "Position", "Heading", "Body" });
 
         propertyNames.ShouldAllBe(name =>
             forbiddenFragments.All(fragment => !name.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
@@ -181,6 +185,79 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         AssertPolicy(nameof(ContentAdminAppService.CreateRevisionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
         AssertPolicy(nameof(ContentAdminAppService.PublishAsync), EnglishLearningPlatformAppPermissions.Content.Publish);
         AssertPolicy(nameof(ContentAdminAppService.ArchiveAsync), EnglishLearningPlatformAppPermissions.Content.Archive);
+        AssertPolicy(nameof(ContentAdminAppService.AddSectionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.UpdateSectionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.RemoveSectionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.ReorderSectionsAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+    }
+
+    [Fact]
+    public async Task Administrator_Should_Manage_And_Publish_Ordered_Sections()
+    {
+        using var tenant = _currentTenant.Change(Guid.NewGuid());
+        var item = await _service.CreateAsync(new CreateContentInput { Type = ContentType.Reading, Title = "Passages" });
+        item = await AddSection(item, "One", "Body one");
+        item = await AddSection(item, "Two", "Body two");
+        item = await AddSection(item, "Three", "Body three");
+
+        var sections = item.Versions.Single().Sections;
+        var second = sections.Single(x => x.Heading == "Two");
+        item = await _service.UpdateSectionAsync(item.Id, second.Id, new UpdateContentSectionInput
+        {
+            Heading = "Two updated",
+            Body = "Body two updated",
+            ConcurrencyStamp = item.ConcurrencyStamp
+        });
+
+        var reversedIds = item.Versions.Single().Sections.OrderByDescending(x => x.Position).Select(x => x.Id).ToList();
+        item = await _service.ReorderSectionsAsync(item.Id, new ReorderContentSectionsInput
+        {
+            SectionIds = reversedIds,
+            ConcurrencyStamp = item.ConcurrencyStamp
+        });
+        var firstAfterReverse = item.Versions.Single().Sections.Single(x => x.Position == 1);
+        item = await _service.RemoveSectionAsync(item.Id, firstAfterReverse.Id, Stamp(item));
+
+        var published = await _service.PublishAsync(item.Id, Stamp(item));
+        var presentation = await _service.GetPublishedAsync(item.Id);
+        presentation.Sections.Select(x => x.Position).ShouldBe(new[] { 1, 2 });
+        presentation.Sections.Select(x => x.Heading).ShouldBe(new[] { "Two updated", "One" });
+        published.Status.ShouldBe(ContentItemStatus.Published);
+    }
+
+    [Fact]
+    public async Task Section_Commands_Should_Enforce_Permission_Concurrency_And_Tenant()
+    {
+        var tenantOne = Guid.NewGuid();
+        var tenantTwo = Guid.NewGuid();
+        ContentItemDto item;
+        using (_currentTenant.Change(tenantOne))
+        {
+            item = await _service.CreateAsync(new CreateContentInput { Type = ContentType.Reading, Title = "Protected sections" });
+
+            using (_authorizationService.DenyAll())
+            {
+                await Should.ThrowAsync<AbpAuthorizationException>(() => _service.AddSectionAsync(item.Id,
+                    new AddContentSectionInput { Heading = "Denied", Body = "Denied", ConcurrencyStamp = item.ConcurrencyStamp }));
+            }
+
+            var staleStamp = item.ConcurrencyStamp;
+            item = await AddSection(item, "Accepted", "Accepted body");
+            await Should.ThrowAsync<AbpDbConcurrencyException>(() => _service.AddSectionAsync(item.Id,
+                new AddContentSectionInput { Heading = "Stale", Body = "Stale", ConcurrencyStamp = staleStamp }));
+        }
+
+        using (_currentTenant.Change(tenantTwo))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() => _service.AddSectionAsync(item.Id,
+                new AddContentSectionInput { Heading = "Cross tenant", Body = "Cross tenant", ConcurrencyStamp = item.ConcurrencyStamp }));
+        }
+
+        using (_currentTenant.Change(tenantOne))
+        {
+            (await _service.GetAsync(item.Id)).Versions.Single().Sections.Select(x => x.Heading)
+                .ShouldBe(new[] { "Accepted" });
+        }
     }
 
     private static void AssertPolicy(string methodName, string expectedPolicy)
@@ -192,4 +269,12 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
 
     private static ContentConcurrencyInput Stamp(ContentItemDto item) =>
         new() { ConcurrencyStamp = item.ConcurrencyStamp };
+
+    private async Task<ContentItemDto> AddSection(ContentItemDto item, string heading, string body) =>
+        await _service.AddSectionAsync(item.Id, new AddContentSectionInput
+        {
+            Heading = heading,
+            Body = body,
+            ConcurrencyStamp = item.ConcurrencyStamp
+        });
 }

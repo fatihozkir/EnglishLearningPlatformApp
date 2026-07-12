@@ -19,6 +19,21 @@ public class ContentVersionDto : EntityDto<Guid>
     public string Title { get; set; } = string.Empty;
     public ContentLifecycleStatus Lifecycle { get; set; }
     public DateTime? PublishedAt { get; set; }
+    public IReadOnlyList<ContentSectionDto> Sections { get; set; } = [];
+}
+
+public class ContentSectionDto : EntityDto<Guid>
+{
+    public int Position { get; set; }
+    public string Heading { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+}
+
+public class PublishedContentSectionDto
+{
+    public int Position { get; set; }
+    public string Heading { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
 }
 
 public class PublishedContentVersionDto : EntityDto<Guid>
@@ -28,4 +43,5 @@ public class PublishedContentVersionDto : EntityDto<Guid>
     public int VersionNumber { get; set; }
     public string Title { get; set; } = string.Empty;
     public DateTime PublishedAt { get; set; }
+    public IReadOnlyList<PublishedContentSectionDto> Sections { get; set; } = [];
 }
