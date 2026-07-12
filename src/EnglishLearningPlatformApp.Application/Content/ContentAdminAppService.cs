@@ -97,7 +97,7 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
         var item = await GetItemAsync(id);
         CheckConcurrency(item, input.ConcurrencyStamp);
-        item.CreateRevision(GuidGenerator.Create());
+        item.CreateRevision(GuidGenerator.Create(), GuidGenerator.Create);
         await _repository.UpdateAsync(item, autoSave: true);
         return Map(item);
     }

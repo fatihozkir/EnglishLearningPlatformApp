@@ -28,7 +28,7 @@ public class ContentItemTests
 
         item.PublishDraft(publishedAt);
         var published = item.Versions.Single();
-        var revision = item.CreateRevision(Guid.NewGuid());
+        var revision = item.CreateRevision(Guid.NewGuid(), Guid.NewGuid);
         item.UpdateDraft("Version two");
 
         published.Title.ShouldBe("Version one");
@@ -42,7 +42,7 @@ public class ContentItemTests
     public void Duplicate_Draft_And_Archived_Changes_Should_Fail()
     {
         var item = CreateItem("Draft");
-        Should.Throw<BusinessException>(() => item.CreateRevision(Guid.NewGuid()))
+        Should.Throw<BusinessException>(() => item.CreateRevision(Guid.NewGuid(), Guid.NewGuid))
             .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentDraftAlreadyExists);
 
         item.Archive();
@@ -50,7 +50,7 @@ public class ContentItemTests
             .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentArchived);
         Should.Throw<BusinessException>(() => item.PublishDraft(DateTime.UtcNow))
             .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentArchived);
-        Should.Throw<BusinessException>(() => item.CreateRevision(Guid.NewGuid()))
+        Should.Throw<BusinessException>(() => item.CreateRevision(Guid.NewGuid(), Guid.NewGuid))
             .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentArchived);
     }
 

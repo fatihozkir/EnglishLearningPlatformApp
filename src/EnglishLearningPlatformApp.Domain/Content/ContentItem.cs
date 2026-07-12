@@ -43,7 +43,36 @@ public class ContentItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Touch();
     }
 
-    public ContentVersion CreateRevision(Guid versionId)
+    public ContentSection AddSection(Guid sectionId, string heading, string body)
+    {
+        EnsureNotArchived();
+        var section = GetDraft().AddSection(sectionId, heading, body);
+        Touch();
+        return section;
+    }
+
+    public void UpdateSection(Guid sectionId, string heading, string body)
+    {
+        EnsureNotArchived();
+        GetDraft().UpdateSection(sectionId, heading, body);
+        Touch();
+    }
+
+    public void RemoveSection(Guid sectionId)
+    {
+        EnsureNotArchived();
+        GetDraft().RemoveSection(sectionId);
+        Touch();
+    }
+
+    public void ReorderSections(IReadOnlyList<Guid> orderedSectionIds)
+    {
+        EnsureNotArchived();
+        GetDraft().ReorderSections(orderedSectionIds);
+        Touch();
+    }
+
+    public ContentVersion CreateRevision(Guid versionId, Func<Guid> sectionIdGenerator)
     {
         EnsureNotArchived();
         if (_versions.Any(x => x.Lifecycle == ContentLifecycleStatus.Draft))
@@ -52,7 +81,7 @@ public class ContentItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         }
 
         var latest = _versions.OrderByDescending(x => x.VersionNumber).First();
-        var revision = new ContentVersion(versionId, Id, TenantId, latest.VersionNumber + 1, latest.Title);
+        var revision = latest.CopyAsDraft(versionId, sectionIdGenerator);
         _versions.Add(revision);
         Touch();
         return revision;

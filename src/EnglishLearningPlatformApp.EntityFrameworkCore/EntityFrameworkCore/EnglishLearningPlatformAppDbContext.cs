@@ -35,6 +35,7 @@ public class EnglishLearningPlatformAppDbContext :
     public DbSet<Book> Books { get; set; }
     public DbSet<ContentItem> ContentItems { get; set; }
     public DbSet<ContentVersion> ContentVersions { get; set; }
+    public DbSet<ContentSection> ContentSections { get; set; }
 
     #region Entities from the modules
 
@@ -122,6 +123,18 @@ public class EnglishLearningPlatformAppDbContext :
             b.HasIndex(x => new { x.ContentItemId, x.VersionNumber }).IsUnique();
             b.HasIndex(x => x.ContentItemId).IsUnique().HasFilter("[Lifecycle] = 0");
             b.HasIndex(x => new { x.TenantId, x.Lifecycle });
+            b.HasMany(x => x.Sections).WithOne().HasForeignKey(x => x.ContentVersionId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Sections).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<ContentSection>(b =>
+        {
+            b.ToTable(EnglishLearningPlatformAppConsts.DbTablePrefix + "ContentSections", EnglishLearningPlatformAppConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Heading).IsRequired().HasMaxLength(ContentConsts.MaxSectionHeadingLength);
+            b.Property(x => x.Body).IsRequired().HasMaxLength(ContentConsts.MaxSectionBodyLength);
+            b.HasIndex(x => new { x.ContentVersionId, x.Position });
+            b.HasIndex(x => new { x.TenantId, x.ContentVersionId });
         });
 
         /* Configure your own tables/entities inside here */
