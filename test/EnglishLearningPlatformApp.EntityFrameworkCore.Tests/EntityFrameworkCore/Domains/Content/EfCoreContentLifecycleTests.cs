@@ -17,6 +17,8 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
     private readonly IRepository<ContentItem, Guid> _repository;
     private readonly IRepository<ContentVersion, Guid> _versionRepository;
     private readonly IRepository<ContentSection, Guid> _sectionRepository;
+    private readonly IRepository<ContentQuestion, Guid> _questionRepository;
+    private readonly IRepository<ContentQuestionOption, Guid> _optionRepository;
     private readonly ICurrentTenant _currentTenant;
 
     public EfCoreContentLifecycleTests()
@@ -24,6 +26,8 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
         _repository = GetRequiredService<IRepository<ContentItem, Guid>>();
         _versionRepository = GetRequiredService<IRepository<ContentVersion, Guid>>();
         _sectionRepository = GetRequiredService<IRepository<ContentSection, Guid>>();
+        _questionRepository = GetRequiredService<IRepository<ContentQuestion, Guid>>();
+        _optionRepository = GetRequiredService<IRepository<ContentQuestionOption, Guid>>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
     }
 
@@ -38,7 +42,9 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
             await WithUnitOfWorkAsync(async () =>
             {
                 var item = new ContentItem(itemId, tenantId, ContentType.Reading, Guid.NewGuid(), "Version one");
-                item.AddSection(Guid.NewGuid(), "Section one", "Original passage");
+                var section = item.AddSection(Guid.NewGuid(), "Section one", "Original passage");
+                item.AddQuestion(section.Id, Guid.NewGuid(), QuestionType.SingleChoice, "Choose", "{\"correct\":1}",
+                    [new("A"), new("B")], Guid.NewGuid);
                 item.PublishDraft(new DateTime(2026, 7, 13, 0, 0, 0, DateTimeKind.Utc));
                 item.CreateRevision(Guid.NewGuid(), Guid.NewGuid);
                 item.UpdateDraft("Version two");
@@ -51,6 +57,7 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
                 .ShouldBe(new[] { "Version one", "Version two" });
             reloaded.Versions.OrderBy(x => x.VersionNumber).Select(x => x.Sections.Single().Body)
                 .ShouldBe(new[] { "Original passage", "Original passage" });
+            reloaded.Versions.Select(x => x.Sections.Single().Questions.Single().Options.Count).ShouldAllBe(x => x == 2);
         }
     }
 
@@ -66,7 +73,9 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
             await WithUnitOfWorkAsync(() =>
             {
                 var item = new ContentItem(itemId, tenantOne, ContentType.Listening, Guid.NewGuid(), "Tenant one");
-                item.AddSection(Guid.NewGuid(), "Private", "Tenant passage");
+                var section = item.AddSection(Guid.NewGuid(), "Private", "Tenant passage");
+                item.AddQuestion(section.Id, Guid.NewGuid(), QuestionType.Matching, "Private question", "{\"pairs\":[]}",
+                    [new("A", "One")], Guid.NewGuid);
                 return _repository.InsertAsync(item);
             });
             (await _repository.FindAsync(itemId)).ShouldNotBeNull();
@@ -77,6 +86,8 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
             (await _repository.FindAsync(itemId)).ShouldBeNull();
             (await _versionRepository.GetCountAsync()).ShouldBe(0);
             (await _sectionRepository.GetCountAsync()).ShouldBe(0);
+            (await _questionRepository.GetCountAsync()).ShouldBe(0);
+            (await _optionRepository.GetCountAsync()).ShouldBe(0);
         }
 
         using (_currentTenant.Change(null))
@@ -84,7 +95,58 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
             (await _repository.FindAsync(itemId)).ShouldBeNull();
             (await _versionRepository.GetCountAsync()).ShouldBe(0);
             (await _sectionRepository.GetCountAsync()).ShouldBe(0);
+            (await _questionRepository.GetCountAsync()).ShouldBe(0);
+            (await _optionRepository.GetCountAsync()).ShouldBe(0);
         }
+    }
+
+    [Fact]
+    public async Task All_Question_Types_Should_Persist_With_Server_Answers()
+    {
+        var tenantId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+        using (_currentTenant.Change(tenantId))
+        {
+            await WithUnitOfWorkAsync(() =>
+            {
+                var item = new ContentItem(itemId, tenantId, ContentType.Reading, Guid.NewGuid(), "All types");
+                var section = item.AddSection(Guid.NewGuid(), "Questions", "Passage");
+                foreach (var type in Enum.GetValues<QuestionType>())
+                {
+                    item.AddQuestion(section.Id, Guid.NewGuid(), type, type.ToString(), "{\"serverOnly\":true}",
+                        type == QuestionType.Matching ? [new("A", "One")] : [], Guid.NewGuid);
+                }
+
+                return _repository.InsertAsync(item);
+            });
+
+            var reloaded = await WithUnitOfWorkAsync(() => _repository.GetAsync(itemId, includeDetails: true));
+            var questions = reloaded.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position).ToList();
+            questions.Select(x => x.Type).ShouldBe(Enum.GetValues<QuestionType>());
+            questions.ShouldAllBe(x => x.AnswerDefinitionJson == "{\"serverOnly\":true}");
+        }
+    }
+
+    [Fact]
+    public async Task Undefined_Question_Type_Should_Be_Rejected_Before_Persistence()
+    {
+        var tenantId = Guid.NewGuid();
+        using (_currentTenant.Change(tenantId))
+        {
+            await WithUnitOfWorkAsync(() =>
+            {
+                var item = new ContentItem(Guid.NewGuid(), tenantId, ContentType.Reading, Guid.NewGuid(), "Invalid type");
+                var section = item.AddSection(Guid.NewGuid(), "Questions", "Passage");
+
+                Should.Throw<Volo.Abp.BusinessException>(() => item.AddQuestion(
+                        section.Id, Guid.NewGuid(), (QuestionType)99, "Prompt", "true", [], Guid.NewGuid))
+                    .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.QuestionTypeInvalid);
+
+                return Task.CompletedTask;
+            });
+        }
+
+        (await _questionRepository.GetCountAsync()).ShouldBe(0);
     }
 
     [Fact]

@@ -36,6 +36,8 @@ public class EnglishLearningPlatformAppDbContext :
     public DbSet<ContentItem> ContentItems { get; set; }
     public DbSet<ContentVersion> ContentVersions { get; set; }
     public DbSet<ContentSection> ContentSections { get; set; }
+    public DbSet<ContentQuestion> ContentQuestions { get; set; }
+    public DbSet<ContentQuestionOption> ContentQuestionOptions { get; set; }
 
     #region Entities from the modules
 
@@ -135,6 +137,30 @@ public class EnglishLearningPlatformAppDbContext :
             b.Property(x => x.Body).IsRequired().HasMaxLength(ContentConsts.MaxSectionBodyLength);
             b.HasIndex(x => new { x.ContentVersionId, x.Position });
             b.HasIndex(x => new { x.TenantId, x.ContentVersionId });
+            b.HasMany(x => x.Questions).WithOne().HasForeignKey(x => x.ContentSectionId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Questions).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<ContentQuestion>(b =>
+        {
+            b.ToTable(EnglishLearningPlatformAppConsts.DbTablePrefix + "ContentQuestions", EnglishLearningPlatformAppConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Prompt).IsRequired().HasMaxLength(ContentConsts.MaxQuestionPromptLength);
+            b.Property(x => x.AnswerDefinitionJson).IsRequired().HasMaxLength(ContentConsts.MaxQuestionAnswerJsonLength);
+            b.HasIndex(x => new { x.ContentSectionId, x.Position });
+            b.HasIndex(x => new { x.TenantId, x.ContentSectionId });
+            b.HasMany(x => x.Options).WithOne().HasForeignKey(x => x.ContentQuestionId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Options).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<ContentQuestionOption>(b =>
+        {
+            b.ToTable(EnglishLearningPlatformAppConsts.DbTablePrefix + "ContentQuestionOptions", EnglishLearningPlatformAppConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Text).IsRequired().HasMaxLength(ContentConsts.MaxQuestionOptionTextLength);
+            b.Property(x => x.MatchText).HasMaxLength(ContentConsts.MaxQuestionOptionTextLength);
+            b.HasIndex(x => new { x.ContentQuestionId, x.Position });
+            b.HasIndex(x => new { x.TenantId, x.ContentQuestionId });
         });
 
         /* Configure your own tables/entities inside here */

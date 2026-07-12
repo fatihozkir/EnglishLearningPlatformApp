@@ -9,4 +9,6 @@ public static class EnglishLearningPlatformAppDomainErrorCodes
     public const string ContentPublishedVersionMissing = "EnglishLearningPlatformApp:ContentPublishedVersionMissing";
     public const string ContentSectionNotFound = "EnglishLearningPlatformApp:ContentSectionNotFound";
     public const string ContentSectionOrderInvalid = "EnglishLearningPlatformApp:ContentSectionOrderInvalid";
+    public const string QuestionAnswerDefinitionInvalid = "EnglishLearningPlatformApp:QuestionAnswerDefinitionInvalid";
+    public const string QuestionTypeInvalid = "EnglishLearningPlatformApp:QuestionTypeInvalid";
 }

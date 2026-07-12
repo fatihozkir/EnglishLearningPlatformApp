@@ -54,7 +54,11 @@ public class EnglishLearningPlatformAppEntityFrameworkCoreModule : AbpModule
         {
             options.Entity<ContentItem>(contentOptions =>
             {
-                contentOptions.DefaultWithDetailsFunc = query => query.Include(x => x.Versions).ThenInclude(x => x.Sections);
+                contentOptions.DefaultWithDetailsFunc = query => query
+                    .Include(x => x.Versions)
+                    .ThenInclude(x => x.Sections)
+                    .ThenInclude(x => x.Questions)
+                    .ThenInclude(x => x.Options);
             });
         });
 

@@ -72,6 +72,28 @@ public class ContentItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Touch();
     }
 
+    public ContentQuestion AddQuestion(
+        Guid sectionId,
+        Guid questionId,
+        QuestionType type,
+        string prompt,
+        string answerDefinitionJson,
+        IReadOnlyList<QuestionOptionValue> options,
+        Func<Guid> optionIdGenerator)
+    {
+        EnsureNotArchived();
+        var question = GetDraft().AddQuestion(
+            sectionId,
+            questionId,
+            type,
+            prompt,
+            answerDefinitionJson,
+            options,
+            optionIdGenerator);
+        Touch();
+        return question;
+    }
+
     public ContentVersion CreateRevision(Guid versionId, Func<Guid> sectionIdGenerator)
     {
         EnsureNotArchived();

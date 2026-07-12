@@ -51,6 +51,25 @@ public class ContentVersion : Entity<Guid>, IMultiTenant
         return section;
     }
 
+    internal ContentQuestion AddQuestion(
+        Guid sectionId,
+        Guid questionId,
+        QuestionType type,
+        string prompt,
+        string answerDefinitionJson,
+        IReadOnlyList<QuestionOptionValue> options,
+        Func<Guid> optionIdGenerator)
+    {
+        EnsureDraft();
+        return GetSection(sectionId).AddQuestion(
+            questionId,
+            type,
+            prompt,
+            answerDefinitionJson,
+            options,
+            optionIdGenerator);
+    }
+
     internal void UpdateSection(Guid sectionId, string heading, string body)
     {
         EnsureDraft();
@@ -85,7 +104,7 @@ public class ContentVersion : Entity<Guid>, IMultiTenant
         var revision = new ContentVersion(versionId, ContentItemId, TenantId, VersionNumber + 1, Title);
         foreach (var section in _sections.OrderBy(x => x.Position))
         {
-            revision.AddSection(sectionIdGenerator(), section.Heading, section.Body);
+            revision._sections.Add(section.Copy(sectionIdGenerator(), versionId, sectionIdGenerator));
         }
 
         return revision;
