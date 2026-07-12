@@ -6,6 +6,9 @@ using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Data;
 using Volo.Abp.Modularity;
 using Volo.Abp.Threading;
+using EnglishLearningPlatformApp.Security;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Volo.Abp.Security.Claims;
 
 namespace EnglishLearningPlatformApp;
 
@@ -23,8 +26,15 @@ public class EnglishLearningPlatformAppTestBaseModule : AbpModule
         {
             options.IsJobExecutionEnabled = false;
         });
-
         context.Services.AddAlwaysAllowAuthorization();
+
+    }
+
+    public override void PostConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.Replace(ServiceDescriptor.Singleton<FakeCurrentPrincipalAccessor, FakeCurrentPrincipalAccessor>());
+        context.Services.Replace(ServiceDescriptor.Singleton<ICurrentPrincipalAccessor>(serviceProvider =>
+            serviceProvider.GetRequiredService<FakeCurrentPrincipalAccessor>()));
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)

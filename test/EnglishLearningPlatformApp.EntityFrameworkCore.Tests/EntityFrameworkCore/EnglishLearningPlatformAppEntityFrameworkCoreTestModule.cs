@@ -10,6 +10,8 @@ using Volo.Abp.FeatureManagement;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Uow;
+using EnglishLearningPlatformApp.Content;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EnglishLearningPlatformApp.EntityFrameworkCore;
 
@@ -42,6 +44,7 @@ public class EnglishLearningPlatformAppEntityFrameworkCoreTestModule : AbpModule
         context.Services.AddAlwaysDisableUnitOfWorkTransaction();
 
         ConfigureInMemorySqlite(context.Services);
+        context.Services.Replace(ServiceDescriptor.Singleton<IContentPermissionAuthorizer, ConfigurableContentPermissionAuthorizer>());
 
     }
 

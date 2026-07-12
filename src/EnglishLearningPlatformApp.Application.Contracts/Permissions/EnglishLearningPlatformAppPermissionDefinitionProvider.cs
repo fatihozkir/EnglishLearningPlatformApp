@@ -20,6 +20,14 @@ public class EnglishLearningPlatformAppPermissionDefinitionProvider : Permission
         authorsPermission.AddChild(EnglishLearningPlatformAppPermissions.Authors.Create, L("Permission:Authors.Create"));
         authorsPermission.AddChild(EnglishLearningPlatformAppPermissions.Authors.Edit, L("Permission:Authors.Edit"));
         authorsPermission.AddChild(EnglishLearningPlatformAppPermissions.Authors.Delete, L("Permission:Authors.Delete"));
+        var contentPermission = myGroup.AddPermission(
+            EnglishLearningPlatformAppPermissions.Content.Default,
+            L("Permission:Content"),
+            multiTenancySide: MultiTenancySides.Tenant);
+        contentPermission.AddChild(EnglishLearningPlatformAppPermissions.Content.Create, L("Permission:Content.Create"));
+        contentPermission.AddChild(EnglishLearningPlatformAppPermissions.Content.Edit, L("Permission:Content.Edit"));
+        contentPermission.AddChild(EnglishLearningPlatformAppPermissions.Content.Publish, L("Permission:Content.Publish"));
+        contentPermission.AddChild(EnglishLearningPlatformAppPermissions.Content.Archive, L("Permission:Content.Archive"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EnglishLearningPlatformAppPermissions.MyPermission1, L("Permission:MyPermission1"));
     }
