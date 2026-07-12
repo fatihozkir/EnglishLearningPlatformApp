@@ -1,0 +1,10 @@
+﻿using EnglishLearningPlatformApp.Books;
+using Xunit;
+
+namespace EnglishLearningPlatformApp.EntityFrameworkCore.Applications.Books;
+
+[Collection(EnglishLearningPlatformAppTestConsts.CollectionDefinitionName)]
+public class EfCoreBookAppService_Tests : BookAppService_Tests<EnglishLearningPlatformAppEntityFrameworkCoreTestModule>
+{
+
+}

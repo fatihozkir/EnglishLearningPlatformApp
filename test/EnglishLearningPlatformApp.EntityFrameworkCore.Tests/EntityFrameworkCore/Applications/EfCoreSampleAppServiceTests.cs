@@ -1,0 +1,10 @@
+using EnglishLearningPlatformApp.Samples;
+using Xunit;
+
+namespace EnglishLearningPlatformApp.EntityFrameworkCore.Applications;
+
+[Collection(EnglishLearningPlatformAppTestConsts.CollectionDefinitionName)]
+public class EfCoreSampleAppServiceTests : SampleAppServiceTests<EnglishLearningPlatformAppEntityFrameworkCoreTestModule>
+{
+
+}

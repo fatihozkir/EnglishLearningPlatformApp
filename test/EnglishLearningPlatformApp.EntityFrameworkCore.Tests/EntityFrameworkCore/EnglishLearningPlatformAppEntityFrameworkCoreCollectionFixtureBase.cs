@@ -1,0 +1,9 @@
+﻿using EnglishLearningPlatformApp.EntityFrameworkCore;
+using Xunit;
+
+namespace EnglishLearningPlatformApp.EntityFrameworkCore;
+
+public class EnglishLearningPlatformAppEntityFrameworkCoreCollectionFixtureBase : ICollectionFixture<EnglishLearningPlatformAppEntityFrameworkCoreFixture>
+{
+
+}

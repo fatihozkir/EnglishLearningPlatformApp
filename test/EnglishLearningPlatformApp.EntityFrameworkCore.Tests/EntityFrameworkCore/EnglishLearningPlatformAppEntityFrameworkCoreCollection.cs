@@ -1,0 +1,9 @@
+﻿using Xunit;
+
+namespace EnglishLearningPlatformApp.EntityFrameworkCore;
+
+[CollectionDefinition(EnglishLearningPlatformAppTestConsts.CollectionDefinitionName)]
+public class EnglishLearningPlatformAppEntityFrameworkCoreCollection : ICollectionFixture<EnglishLearningPlatformAppEntityFrameworkCoreFixture>
+{
+
+}

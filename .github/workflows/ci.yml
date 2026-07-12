@@ -1,0 +1,35 @@
+name: foundation-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore EnglishLearningPlatformApp.slnx
+      - run: dotnet build EnglishLearningPlatformApp.slnx --configuration Release --no-restore
+      - run: dotnet test EnglishLearningPlatformApp.slnx --configuration Release --no-build --no-restore
+
+  angular:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: angular
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: angular/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:prod

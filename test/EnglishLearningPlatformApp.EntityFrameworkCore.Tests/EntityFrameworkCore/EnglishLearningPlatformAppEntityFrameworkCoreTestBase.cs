@@ -1,0 +1,8 @@
+﻿using Volo.Abp;
+
+namespace EnglishLearningPlatformApp.EntityFrameworkCore;
+
+public abstract class EnglishLearningPlatformAppEntityFrameworkCoreTestBase : EnglishLearningPlatformAppTestBase<EnglishLearningPlatformAppEntityFrameworkCoreTestModule>
+{
+
+}

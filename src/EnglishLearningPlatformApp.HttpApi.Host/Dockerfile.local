@@ -1,0 +1,15 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0  AS base
+USER $APP_UID
+EXPOSE 8080
+EXPOSE 8081
+
+COPY bin/Release/net10.0/publish/ app/
+WORKDIR /app
+
+FROM base AS final
+WORKDIR /app
+
+# Mount the OpenIddict certificate at runtime and provide its passphrase through
+# AuthServer__CertificatePassPhrase. Certificates and passphrases are not baked into images.
+
+ENTRYPOINT ["dotnet", "EnglishLearningPlatformApp.HttpApi.Host.dll"]

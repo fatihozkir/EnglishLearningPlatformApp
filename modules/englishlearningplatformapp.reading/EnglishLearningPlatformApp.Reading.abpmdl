@@ -1,0 +1,58 @@
+{
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "EnglishLearningPlatformApp.Reading.Domain": {
+      "path": "src/EnglishLearningPlatformApp.Reading.Domain/EnglishLearningPlatformApp.Reading.Domain.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.Application.Contracts": {
+      "path": "src/EnglishLearningPlatformApp.Reading.Application.Contracts/EnglishLearningPlatformApp.Reading.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.Application": {
+      "path": "src/EnglishLearningPlatformApp.Reading.Application/EnglishLearningPlatformApp.Reading.Application.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.EntityFrameworkCore": {
+      "path": "src/EnglishLearningPlatformApp.Reading.EntityFrameworkCore/EnglishLearningPlatformApp.Reading.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.HttpApi": {
+      "path": "src/EnglishLearningPlatformApp.Reading.HttpApi/EnglishLearningPlatformApp.Reading.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.HttpApi.Client": {
+      "path": "src/EnglishLearningPlatformApp.Reading.HttpApi.Client/EnglishLearningPlatformApp.Reading.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.TestBase": {
+      "path": "test/EnglishLearningPlatformApp.Reading.TestBase/EnglishLearningPlatformApp.Reading.TestBase.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.Reading.EntityFrameworkCore.Tests": {
+      "path": "test/EnglishLearningPlatformApp.Reading.EntityFrameworkCore.Tests/EnglishLearningPlatformApp.Reading.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.Reading.Domain.Tests": {
+      "path": "test/EnglishLearningPlatformApp.Reading.Domain.Tests/EnglishLearningPlatformApp.Reading.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.Reading.Application.Tests": {
+      "path": "test/EnglishLearningPlatformApp.Reading.Application.Tests/EnglishLearningPlatformApp.Reading.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.Reading.Domain.Shared": {
+      "path": "src/EnglishLearningPlatformApp.Reading.Domain.Shared/EnglishLearningPlatformApp.Reading.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Reading.Installer": {
+       "path": "src/EnglishLearningPlatformApp.Reading.Installer/EnglishLearningPlatformApp.Reading.Installer.abppkg",
+       "folder": "src"
+    }
+  }
+}

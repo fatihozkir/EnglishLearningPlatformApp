@@ -1,0 +1,23 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+
+    <Folder Name="/src/">
+        <Project Path="src/EnglishLearningPlatformApp.Reading.Domain.Shared/EnglishLearningPlatformApp.Reading.Domain.Shared.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.Domain/EnglishLearningPlatformApp.Reading.Domain.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.Application.Contracts/EnglishLearningPlatformApp.Reading.Application.Contracts.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.Application/EnglishLearningPlatformApp.Reading.Application.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.EntityFrameworkCore/EnglishLearningPlatformApp.Reading.EntityFrameworkCore.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.HttpApi/EnglishLearningPlatformApp.Reading.HttpApi.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.HttpApi.Client/EnglishLearningPlatformApp.Reading.HttpApi.Client.csproj" />
+        <Project Path="src/EnglishLearningPlatformApp.Reading.Installer/EnglishLearningPlatformApp.Reading.Installer.csproj" />
+    </Folder>
+    
+    <Folder Name="/test/">
+        <Project Path="test/EnglishLearningPlatformApp.Reading.TestBase/EnglishLearningPlatformApp.Reading.TestBase.csproj" />
+        <Project Path="test/EnglishLearningPlatformApp.Reading.EntityFrameworkCore.Tests/EnglishLearningPlatformApp.Reading.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/EnglishLearningPlatformApp.Reading.Domain.Tests/EnglishLearningPlatformApp.Reading.Domain.Tests.csproj" />
+        <Project Path="test/EnglishLearningPlatformApp.Reading.Application.Tests/EnglishLearningPlatformApp.Reading.Application.Tests.csproj" />
+    </Folder>
+</Solution>

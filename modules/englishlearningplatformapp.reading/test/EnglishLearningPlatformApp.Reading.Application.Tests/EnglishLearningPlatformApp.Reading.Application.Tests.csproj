@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>EnglishLearningPlatformApp.Reading</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\EnglishLearningPlatformApp.Reading.Application\EnglishLearningPlatformApp.Reading.Application.csproj" />
+    <ProjectReference Include="..\EnglishLearningPlatformApp.Reading.Domain.Tests\EnglishLearningPlatformApp.Reading.Domain.Tests.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+  </ItemGroup>
+
+</Project>

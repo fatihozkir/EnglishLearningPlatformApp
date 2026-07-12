@@ -1,0 +1,114 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXLiteTheme": {
+      "version": "5.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.Account": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.OpenIddict": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.Identity": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.TenantManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    },
+    "Volo.Abp.BlobStoring.Database": {
+      "version": "10.4.1",
+      "isInstalled": true,
+      "creationTime": "07/12/2026 20:00:58 +00:00"
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "EnglishLearningPlatformApp.Application": {
+      "path": "src/EnglishLearningPlatformApp.Application/EnglishLearningPlatformApp.Application.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Application.Tests": {
+      "path": "test/EnglishLearningPlatformApp.Application.Tests/EnglishLearningPlatformApp.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.Domain.Shared": {
+      "path": "src/EnglishLearningPlatformApp.Domain.Shared/EnglishLearningPlatformApp.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Application.Contracts": {
+      "path": "src/EnglishLearningPlatformApp.Application.Contracts/EnglishLearningPlatformApp.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.HttpApi": {
+      "path": "src/EnglishLearningPlatformApp.HttpApi/EnglishLearningPlatformApp.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.HttpApi.Client": {
+      "path": "src/EnglishLearningPlatformApp.HttpApi.Client/EnglishLearningPlatformApp.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.EntityFrameworkCore.Tests": {
+      "path": "test/EnglishLearningPlatformApp.EntityFrameworkCore.Tests/EnglishLearningPlatformApp.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.EntityFrameworkCore": {
+      "path": "src/EnglishLearningPlatformApp.EntityFrameworkCore/EnglishLearningPlatformApp.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.TestBase": {
+      "path": "test/EnglishLearningPlatformApp.TestBase/EnglishLearningPlatformApp.TestBase.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.Domain.Tests": {
+      "path": "test/EnglishLearningPlatformApp.Domain.Tests/EnglishLearningPlatformApp.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/EnglishLearningPlatformApp.HttpApi.Client.ConsoleTestApp/EnglishLearningPlatformApp.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "EnglishLearningPlatformApp.DbMigrator": {
+      "path": "src/EnglishLearningPlatformApp.DbMigrator/EnglishLearningPlatformApp.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.HttpApi.Host": {
+      "path": "src/EnglishLearningPlatformApp.HttpApi.Host/EnglishLearningPlatformApp.HttpApi.Host.abppkg",
+      "folder": "src"
+    },
+    "EnglishLearningPlatformApp.Domain": {
+      "path": "src/EnglishLearningPlatformApp.Domain/EnglishLearningPlatformApp.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}

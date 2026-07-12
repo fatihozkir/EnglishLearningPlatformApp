@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.prod.json",
+  "compilerOptions": {
+    "paths": {
+      "@english-learning-platform-app/reading": ["projects/reading/src/public-api.ts"],
+      "@english-learning-platform-app/reading/config": [
+        "projects/reading/config/src/public-api.ts"
+      ]
+    }
+  }
+}
