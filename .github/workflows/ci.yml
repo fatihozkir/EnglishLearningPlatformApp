@@ -32,4 +32,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: angular/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run test -- --watch=false
       - run: pnpm run build:prod
+      - run: pnpm run verify:pwa

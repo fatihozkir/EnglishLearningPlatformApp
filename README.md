@@ -32,6 +32,12 @@ Never place these values in Angular configuration or committed `appsettings*.jso
 4. Start the API with `dotnet run --project src/EnglishLearningPlatformApp.HttpApi.Host`.
 5. From `angular`, start the client with `pnpm start`.
 
+### PWA behavior
+
+The production Angular build is installable and online-first. Its service worker caches only the reviewed static application shell. Authentication, tokens, attempts, answers, results, writing, AI feedback, vocabulary, administration, and all other private or mutable API responses remain network-only.
+
+When offline, the shell displays a connection-required notice. Learning operations are not queued. When a new deployment is ready, the application asks the user before reloading so active work is not silently interrupted.
+
 For a containerized development database, set `MSSQL_SA_PASSWORD` and run:
 
 ```powershell
@@ -58,7 +64,10 @@ dotnet build EnglishLearningPlatformApp.slnx --configuration Release --no-restor
 dotnet test EnglishLearningPlatformApp.slnx --configuration Release --no-build --no-restore
 Set-Location angular
 pnpm install --frozen-lockfile
+pnpm run lint
+pnpm run test -- --watch=false
 pnpm run build:prod
+pnpm run verify:pwa
 ```
 
 It is recommended to use **two** RSA certificates, distinct from the certificate(s) used for HTTPS: one for encryption, one for signing.

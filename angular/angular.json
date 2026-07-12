@@ -33,6 +33,7 @@
             "allowedCommonJsDependencies": ["chart.js", "js-sha256"],
             "assets": [
               "src/favicon.ico",
+              "src/manifest.webmanifest",
               "src/assets",
               {
                 "glob": "web.config",
@@ -138,6 +139,7 @@
           },
           "configurations": {
             "production": {
+              "serviceWorker": "ngsw-config.json",
               "optimization": {
                 "fonts": false
               },
