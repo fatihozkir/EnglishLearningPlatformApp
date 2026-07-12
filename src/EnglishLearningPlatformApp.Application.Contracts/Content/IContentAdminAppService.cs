@@ -17,4 +17,5 @@ public interface IContentAdminAppService : IApplicationService
     Task<ContentItemDto> UpdateSectionAsync(Guid id, Guid sectionId, UpdateContentSectionInput input);
     Task<ContentItemDto> RemoveSectionAsync(Guid id, Guid sectionId, ContentConcurrencyInput input);
     Task<ContentItemDto> ReorderSectionsAsync(Guid id, ReorderContentSectionsInput input);
+    Task<ContentItemDto> AddQuestionAsync(Guid id, AddContentQuestionInput input);
 }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Text.Json;
 using EnglishLearningPlatformApp.EntityFrameworkCore;
 using EnglishLearningPlatformApp.Security;
 using Shouldly;
@@ -10,6 +11,7 @@ using Volo.Abp.Domain.Entities;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.Data;
+using Volo.Abp.Validation;
 using EnglishLearningPlatformApp.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
@@ -164,11 +166,21 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
     public void Published_Contract_Should_Not_Expose_Answer_Or_Grading_Fields()
     {
         var forbiddenFragments = new[] { "answer", "correct", "solution", "grading", "score" };
-        var propertyNames = new[] { typeof(PublishedContentVersionDto), typeof(PublishedContentSectionDto) }
+        var propertyNames = new[]
+            {
+                typeof(PublishedContentVersionDto), typeof(PublishedContentSectionDto),
+                typeof(PublishedContentQuestionDto), typeof(PublishedContentQuestionOptionDto)
+            }
             .SelectMany(type => type.GetProperties()).Select(property => property.Name).ToList();
 
         typeof(PublishedContentSectionDto).GetProperties().Select(x => x.Name)
-            .ShouldBe(new[] { "Position", "Heading", "Body" });
+            .ShouldBe(new[] { "Position", "Heading", "Body", "Questions" });
+
+        typeof(PublishedContentQuestionDto).GetProperties().Select(x => x.Name)
+            .ShouldBe(new[] { "Position", "Type", "Prompt", "Options", "MatchChoices" });
+
+        typeof(PublishedContentQuestionOptionDto).GetProperties().Select(x => x.Name)
+            .ShouldBe(new[] { "Position", "Text" });
 
         propertyNames.ShouldAllBe(name =>
             forbiddenFragments.All(fragment => !name.Contains(fragment, StringComparison.OrdinalIgnoreCase)));
@@ -189,6 +201,7 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         AssertPolicy(nameof(ContentAdminAppService.UpdateSectionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
         AssertPolicy(nameof(ContentAdminAppService.RemoveSectionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
         AssertPolicy(nameof(ContentAdminAppService.ReorderSectionsAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.AddQuestionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
     }
 
     [Fact]
@@ -260,6 +273,102 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         }
     }
 
+    [Fact]
+    public async Task Administrator_Should_Add_All_Question_Types_Without_Published_Answer_Leakage()
+    {
+        using var tenant = _currentTenant.Change(Guid.NewGuid());
+        var item = await _service.CreateAsync(new CreateContentInput { Type = ContentType.Reading, Title = "Question set" });
+        item = await AddSection(item, "Passage", "Read this");
+        var sectionId = item.Versions.Single().Sections.Single().Id;
+
+        foreach (var type in Enum.GetValues<QuestionType>())
+        {
+            item = await _service.AddQuestionAsync(item.Id, new AddContentQuestionInput
+            {
+                SectionId = sectionId,
+                Type = type,
+                Prompt = $"Prompt {type}",
+                AnswerDefinitionJson = $"{{\"type\":\"{type}\",\"secret\":true}}",
+                Options = type == QuestionType.Matching
+                    ?
+                    [
+                        new ContentQuestionOptionInput { Text = "A", MatchText = "Two" },
+                        new ContentQuestionOptionInput { Text = "B", MatchText = "One" }
+                    ]
+                    : [new ContentQuestionOptionInput { Text = "A" }],
+                ConcurrencyStamp = item.ConcurrencyStamp
+            });
+        }
+
+        var adminQuestions = item.Versions.Single().Sections.Single().Questions;
+        adminQuestions.Select(x => x.Type).ShouldBe(Enum.GetValues<QuestionType>());
+        adminQuestions.ShouldAllBe(x => x.AnswerDefinitionJson.Contains("secret", StringComparison.Ordinal));
+
+        item = await _service.PublishAsync(item.Id, Stamp(item));
+        var published = await _service.GetPublishedAsync(item.Id);
+        published.Sections.Single().Questions.Select(x => x.Type).ShouldBe(Enum.GetValues<QuestionType>());
+        var json = JsonSerializer.Serialize(published);
+        json.ShouldNotContain("AnswerDefinition", Case.Insensitive);
+        json.ShouldNotContain("secret", Case.Insensitive);
+        var matching = published.Sections.Single().Questions.Single(x => x.Type == QuestionType.Matching);
+        matching.Options.Select(x => x.Text).ShouldBe(new[] { "A", "B" });
+        matching.MatchChoices.ShouldBe(new[] { "One", "Two" });
+    }
+
+    [Fact]
+    public async Task Add_Question_Should_Enforce_Permission_Concurrency_And_Tenant()
+    {
+        var tenantOne = Guid.NewGuid();
+        var tenantTwo = Guid.NewGuid();
+        ContentItemDto item;
+        Guid sectionId;
+        using (_currentTenant.Change(tenantOne))
+        {
+            item = await _service.CreateAsync(new CreateContentInput { Type = ContentType.Reading, Title = "Protected questions" });
+            item = await AddSection(item, "Passage", "Body");
+            sectionId = item.Versions.Single().Sections.Single().Id;
+            var denied = QuestionInput(sectionId, item.ConcurrencyStamp);
+            using (_authorizationService.DenyAll())
+            {
+                await Should.ThrowAsync<AbpAuthorizationException>(() => _service.AddQuestionAsync(item.Id, denied));
+            }
+
+            var staleStamp = item.ConcurrencyStamp;
+            item = await _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp));
+            await Should.ThrowAsync<AbpDbConcurrencyException>(() =>
+                _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, staleStamp)));
+        }
+
+        using (_currentTenant.Change(tenantTwo))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() =>
+                _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp)));
+        }
+
+        using (_currentTenant.Change(tenantOne))
+        {
+            (await _service.GetAsync(item.Id)).Versions.Single().Sections.Single().Questions.Count.ShouldBe(1);
+        }
+    }
+
+    [Fact]
+    public async Task Add_Question_Should_Reject_Null_Options()
+    {
+        using var tenant = _currentTenant.Change(Guid.NewGuid());
+        var item = await _service.CreateAsync(new CreateContentInput { Type = ContentType.Reading, Title = "Validation" });
+        item = await AddSection(item, "Passage", "Body");
+
+        await Should.ThrowAsync<AbpValidationException>(() => _service.AddQuestionAsync(item.Id, new AddContentQuestionInput
+        {
+            SectionId = item.Versions.Single().Sections.Single().Id,
+            Type = QuestionType.TrueFalse,
+            Prompt = "Prompt",
+            AnswerDefinitionJson = "true",
+            Options = null!,
+            ConcurrencyStamp = item.ConcurrencyStamp
+        }));
+    }
+
     private static void AssertPolicy(string methodName, string expectedPolicy)
     {
         typeof(ContentAdminAppService).GetMethod(methodName)!
@@ -277,4 +386,13 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
             Body = body,
             ConcurrencyStamp = item.ConcurrencyStamp
         });
+
+    private static AddContentQuestionInput QuestionInput(Guid sectionId, string stamp) => new()
+    {
+        SectionId = sectionId,
+        Type = QuestionType.TrueFalse,
+        Prompt = "True?",
+        AnswerDefinitionJson = "true",
+        ConcurrencyStamp = stamp
+    };
 }

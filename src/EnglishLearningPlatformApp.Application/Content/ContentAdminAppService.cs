@@ -162,6 +162,26 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         return Map(item);
     }
 
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> AddQuestionAsync(Guid id, AddContentQuestionInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        var options = Check.NotNull(input.Options, nameof(input.Options));
+        item.AddQuestion(
+            input.SectionId,
+            GuidGenerator.Create(),
+            input.Type,
+            input.Prompt,
+            input.AnswerDefinitionJson,
+            options.Select(x => new QuestionOptionValue(x.Text, x.MatchText)).ToList(),
+            GuidGenerator.Create);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
     private Task<ContentItem> GetItemAsync(Guid id) => _repository.GetAsync(id, includeDetails: true);
 
     private static void CheckConcurrency(ContentItem item, string expectedStamp)
@@ -212,7 +232,24 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         Id = section.Id,
         Position = section.Position,
         Heading = section.Heading,
-        Body = section.Body
+        Body = section.Body,
+        Questions = section.Questions.OrderBy(x => x.Position).Select(Map).ToList()
+    };
+
+    private static ContentQuestionDto Map(ContentQuestion question) => new()
+    {
+        Id = question.Id,
+        Position = question.Position,
+        Type = question.Type,
+        Prompt = question.Prompt,
+        AnswerDefinitionJson = question.AnswerDefinitionJson,
+        Options = question.Options.OrderBy(x => x.Position).Select(x => new ContentQuestionOptionDto
+        {
+            Id = x.Id,
+            Position = x.Position,
+            Text = x.Text,
+            MatchText = x.MatchText
+        }).ToList()
     };
 
     private static PublishedContentVersionDto MapPublished(ContentItem item, ContentVersion version) => new()
@@ -230,6 +267,21 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
     {
         Position = section.Position,
         Heading = section.Heading,
-        Body = section.Body
+        Body = section.Body,
+        Questions = section.Questions.OrderBy(x => x.Position).Select(x => new PublishedContentQuestionDto
+        {
+            Position = x.Position,
+            Type = x.Type,
+            Prompt = x.Prompt,
+            Options = x.Options.OrderBy(option => option.Position).Select(option => new PublishedContentQuestionOptionDto
+            {
+                Position = option.Position,
+                Text = option.Text
+            }).ToList(),
+            MatchChoices = x.Type == QuestionType.Matching
+                ? x.Options.Select(option => option.MatchText).Where(value => value != null)
+                    .Select(value => value!).OrderBy(value => value, StringComparer.Ordinal).ToList()
+                : []
+        }).ToList()
     };
 }

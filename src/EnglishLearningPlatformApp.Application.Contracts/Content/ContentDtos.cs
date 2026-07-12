@@ -27,6 +27,23 @@ public class ContentSectionDto : EntityDto<Guid>
     public int Position { get; set; }
     public string Heading { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
+    public IReadOnlyList<ContentQuestionDto> Questions { get; set; } = [];
+}
+
+public class ContentQuestionDto : EntityDto<Guid>
+{
+    public int Position { get; set; }
+    public QuestionType Type { get; set; }
+    public string Prompt { get; set; } = string.Empty;
+    public string AnswerDefinitionJson { get; set; } = string.Empty;
+    public IReadOnlyList<ContentQuestionOptionDto> Options { get; set; } = [];
+}
+
+public class ContentQuestionOptionDto : EntityDto<Guid>
+{
+    public int Position { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public string? MatchText { get; set; }
 }
 
 public class PublishedContentSectionDto
@@ -34,6 +51,22 @@ public class PublishedContentSectionDto
     public int Position { get; set; }
     public string Heading { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
+    public IReadOnlyList<PublishedContentQuestionDto> Questions { get; set; } = [];
+}
+
+public class PublishedContentQuestionDto
+{
+    public int Position { get; set; }
+    public QuestionType Type { get; set; }
+    public string Prompt { get; set; } = string.Empty;
+    public IReadOnlyList<PublishedContentQuestionOptionDto> Options { get; set; } = [];
+    public IReadOnlyList<string> MatchChoices { get; set; } = [];
+}
+
+public class PublishedContentQuestionOptionDto
+{
+    public int Position { get; set; }
+    public string Text { get; set; } = string.Empty;
 }
 
 public class PublishedContentVersionDto : EntityDto<Guid>

@@ -48,3 +48,30 @@ public class ReorderContentSectionsInput : ContentConcurrencyInput
     [Required]
     public IReadOnlyList<Guid> SectionIds { get; set; } = [];
 }
+
+public class AddContentQuestionInput : ContentConcurrencyInput
+{
+    public Guid SectionId { get; set; }
+    public QuestionType Type { get; set; }
+
+    [Required]
+    [StringLength(ContentConsts.MaxQuestionPromptLength)]
+    public string Prompt { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(ContentConsts.MaxQuestionAnswerJsonLength)]
+    public string AnswerDefinitionJson { get; set; } = string.Empty;
+
+    [Required]
+    public IReadOnlyList<ContentQuestionOptionInput> Options { get; set; } = [];
+}
+
+public class ContentQuestionOptionInput
+{
+    [Required]
+    [StringLength(ContentConsts.MaxQuestionOptionTextLength)]
+    public string Text { get; set; } = string.Empty;
+
+    [StringLength(ContentConsts.MaxQuestionOptionTextLength)]
+    public string? MatchText { get; set; }
+}
