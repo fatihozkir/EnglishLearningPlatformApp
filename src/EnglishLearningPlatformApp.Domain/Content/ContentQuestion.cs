@@ -36,21 +36,18 @@ public class ContentQuestion : Entity<Guid>, IMultiTenant
         ContentSectionId = sectionId;
         TenantId = tenantId;
         Position = position;
-        if (!Enum.IsDefined(type))
-        {
-            throw new BusinessException(EnglishLearningPlatformAppDomainErrorCodes.QuestionTypeInvalid)
-                .WithData(nameof(type), (int)type);
-        }
-
-        Type = type;
-        Prompt = Check.NotNullOrWhiteSpace(prompt, nameof(prompt), ContentConsts.MaxQuestionPromptLength);
-        AnswerDefinitionJson = ValidateAnswerJson(answerDefinitionJson);
-
-        for (var index = 0; index < options.Count; index++)
-        {
-            _options.Add(new ContentQuestionOption(optionIdGenerator(), id, tenantId, index + 1, options[index]));
-        }
+        SetDefinition(type, prompt, answerDefinitionJson, options, optionIdGenerator);
     }
+
+    internal void Update(
+        QuestionType type,
+        string prompt,
+        string answerDefinitionJson,
+        IReadOnlyList<QuestionOptionValue> options,
+        Func<Guid> optionIdGenerator) =>
+        SetDefinition(type, prompt, answerDefinitionJson, options, optionIdGenerator);
+
+    internal void MoveTo(int position) => Position = position;
 
     internal ContentQuestion Copy(Guid questionId, Guid sectionId, Func<Guid> idGenerator)
     {
@@ -84,5 +81,30 @@ public class ContentQuestion : Entity<Guid>, IMultiTenant
             throw new BusinessException(EnglishLearningPlatformAppDomainErrorCodes.QuestionAnswerDefinitionInvalid)
                 .WithData("JsonError", exception.Message);
         }
+    }
+
+    private void SetDefinition(
+        QuestionType type,
+        string prompt,
+        string answerDefinitionJson,
+        IReadOnlyList<QuestionOptionValue> options,
+        Func<Guid> optionIdGenerator)
+    {
+        if (!Enum.IsDefined(type))
+        {
+            throw new BusinessException(EnglishLearningPlatformAppDomainErrorCodes.QuestionTypeInvalid)
+                .WithData(nameof(type), (int)type);
+        }
+
+        var checkedPrompt = Check.NotNullOrWhiteSpace(prompt, nameof(prompt), ContentConsts.MaxQuestionPromptLength);
+        var checkedAnswer = ValidateAnswerJson(answerDefinitionJson);
+        var replacements = options.Select((value, index) =>
+            new ContentQuestionOption(optionIdGenerator(), Id, TenantId, index + 1, value)).ToList();
+
+        Type = type;
+        Prompt = checkedPrompt;
+        AnswerDefinitionJson = checkedAnswer;
+        _options.Clear();
+        _options.AddRange(replacements);
     }
 }

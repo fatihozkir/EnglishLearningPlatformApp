@@ -76,6 +76,25 @@ public class ContentVersion : Entity<Guid>, IMultiTenant
         GetSection(sectionId).Update(heading, body);
     }
 
+    internal void UpdateQuestion(Guid sectionId, Guid questionId, QuestionType type, string prompt,
+        string answerDefinitionJson, IReadOnlyList<QuestionOptionValue> options, Func<Guid> optionIdGenerator)
+    {
+        EnsureDraft();
+        GetSection(sectionId).UpdateQuestion(questionId, type, prompt, answerDefinitionJson, options, optionIdGenerator);
+    }
+
+    internal void RemoveQuestion(Guid sectionId, Guid questionId)
+    {
+        EnsureDraft();
+        GetSection(sectionId).RemoveQuestion(questionId);
+    }
+
+    internal void ReorderQuestions(Guid sectionId, IReadOnlyList<Guid> orderedQuestionIds)
+    {
+        EnsureDraft();
+        GetSection(sectionId).ReorderQuestions(orderedQuestionIds);
+    }
+
     internal void RemoveSection(Guid sectionId)
     {
         EnsureDraft();

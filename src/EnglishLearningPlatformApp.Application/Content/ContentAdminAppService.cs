@@ -182,6 +182,45 @@ public class ContentAdminAppService : ApplicationService, IContentAdminAppServic
         return Map(item);
     }
 
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> UpdateQuestionAsync(Guid id, Guid questionId, UpdateContentQuestionInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        var options = Check.NotNull(input.Options, nameof(input.Options));
+        item.UpdateQuestion(input.SectionId, questionId, input.Type, input.Prompt, input.AnswerDefinitionJson,
+            options.Select(x => new QuestionOptionValue(x.Text, x.MatchText)).ToList(), GuidGenerator.Create);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> RemoveQuestionAsync(
+        Guid id, Guid sectionId, Guid questionId, ContentConcurrencyInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        item.RemoveQuestion(sectionId, questionId);
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
+    [Authorize(EnglishLearningPlatformAppPermissions.Content.Edit)]
+    public async Task<ContentItemDto> ReorderQuestionsAsync(Guid id, ReorderContentQuestionsInput input)
+    {
+        EnsureAuthenticated();
+        await _permissionAuthorizer.CheckAsync(EnglishLearningPlatformAppPermissions.Content.Edit);
+        var item = await GetItemAsync(id);
+        CheckConcurrency(item, input.ConcurrencyStamp);
+        item.ReorderQuestions(input.SectionId, Check.NotNull(input.QuestionIds, nameof(input.QuestionIds)));
+        await _repository.UpdateAsync(item, autoSave: true);
+        return Map(item);
+    }
+
     private Task<ContentItem> GetItemAsync(Guid id) => _repository.GetAsync(id, includeDetails: true);
 
     private static void CheckConcurrency(ContentItem item, string expectedStamp)

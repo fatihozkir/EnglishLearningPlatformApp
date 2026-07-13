@@ -79,6 +79,78 @@ public class ContentQuestionTests
         copy.Options.Single().MatchText.ShouldBe("b");
     }
 
+    [Fact]
+    public void Draft_Questions_Should_Update_Remove_And_Reorder_Atomically()
+    {
+        var item = CreateItem(out var sectionId);
+        var first = item.AddQuestion(sectionId, Guid.NewGuid(), QuestionType.SingleChoice, "First", "1",
+            [new("Old A"), new("Old B")], Guid.NewGuid);
+        var oldOptionIds = first.Options.Select(x => x.Id).ToList();
+        var second = item.AddQuestion(sectionId, Guid.NewGuid(), QuestionType.TrueFalse, "Second", "true", [], Guid.NewGuid);
+        var third = item.AddQuestion(sectionId, Guid.NewGuid(), QuestionType.ShortAnswer, "Third", "\"ok\"", [], Guid.NewGuid);
+
+        item.UpdateQuestion(sectionId, first.Id, QuestionType.MultipleSelect, "Updated", "[1,2]",
+            [new("New A"), new("New B")], Guid.NewGuid);
+        first.Options.Select(x => x.Id).ShouldNotContain(oldOptionIds[0]);
+        first.Prompt.ShouldBe("Updated");
+
+        item.ReorderQuestions(sectionId, [third.Id, first.Id, second.Id]);
+        item.RemoveQuestion(sectionId, first.Id);
+        item.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position).Select(x => x.Id)
+            .ShouldBe(new[] { third.Id, second.Id });
+        item.Versions.Single().Sections.Single().Questions.Select(x => x.Position).OrderBy(x => x)
+            .ShouldBe(new[] { 1, 2 });
+
+        Should.Throw<BusinessException>(() => item.ReorderQuestions(sectionId, [third.Id, third.Id]))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentQuestionOrderInvalid);
+        item.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position).Select(x => x.Id)
+            .ShouldBe(new[] { third.Id, second.Id });
+    }
+
+    [Fact]
+    public void Invalid_Update_Should_Leave_Question_Unchanged()
+    {
+        var item = CreateItem(out var sectionId);
+        var question = item.AddQuestion(sectionId, Guid.NewGuid(), QuestionType.SingleChoice, "Original", "1",
+            [new("A"), new("B")], Guid.NewGuid);
+        var optionIds = question.Options.Select(x => x.Id).ToList();
+
+        Should.Throw<BusinessException>(() => item.UpdateQuestion(sectionId, question.Id, QuestionType.MultipleSelect,
+            "Changed", "bad-json", [new("Replacement")], Guid.NewGuid));
+
+        question.Type.ShouldBe(QuestionType.SingleChoice);
+        question.Prompt.ShouldBe("Original");
+        question.AnswerDefinitionJson.ShouldBe("1");
+        question.Options.Select(x => x.Id).ShouldBe(optionIds);
+    }
+
+    [Fact]
+    public void Published_Question_Mutations_Should_Fail()
+    {
+        var item = CreateItem(out var sectionId);
+        var question = item.AddQuestion(sectionId, Guid.NewGuid(), QuestionType.TrueFalse, "Prompt", "true", [], Guid.NewGuid);
+        item.PublishDraft(DateTime.UtcNow);
+
+        Should.Throw<BusinessException>(() => item.UpdateQuestion(sectionId, question.Id, QuestionType.TrueFalse,
+            "Changed", "false", [], Guid.NewGuid)).Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentDraftMissing);
+        Should.Throw<BusinessException>(() => item.RemoveQuestion(sectionId, question.Id))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentDraftMissing);
+        Should.Throw<BusinessException>(() => item.ReorderQuestions(sectionId, [question.Id]))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentDraftMissing);
+
+        var archived = CreateItem(out var archivedSectionId);
+        var archivedQuestion = archived.AddQuestion(archivedSectionId, Guid.NewGuid(), QuestionType.TrueFalse,
+            "Prompt", "true", [], Guid.NewGuid);
+        archived.Archive();
+        Should.Throw<BusinessException>(() => archived.UpdateQuestion(archivedSectionId, archivedQuestion.Id,
+            QuestionType.TrueFalse, "Changed", "false", [], Guid.NewGuid))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentArchived);
+        Should.Throw<BusinessException>(() => archived.RemoveQuestion(archivedSectionId, archivedQuestion.Id))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentArchived);
+        Should.Throw<BusinessException>(() => archived.ReorderQuestions(archivedSectionId, [archivedQuestion.Id]))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.ContentArchived);
+    }
+
     private static ContentItem CreateItem(out Guid sectionId)
     {
         var item = new ContentItem(Guid.NewGuid(), Guid.NewGuid(), ContentType.Reading, Guid.NewGuid(), "Questions");

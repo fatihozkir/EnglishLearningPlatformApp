@@ -11,4 +11,6 @@ public static class EnglishLearningPlatformAppDomainErrorCodes
     public const string ContentSectionOrderInvalid = "EnglishLearningPlatformApp:ContentSectionOrderInvalid";
     public const string QuestionAnswerDefinitionInvalid = "EnglishLearningPlatformApp:QuestionAnswerDefinitionInvalid";
     public const string QuestionTypeInvalid = "EnglishLearningPlatformApp:QuestionTypeInvalid";
+    public const string ContentQuestionNotFound = "EnglishLearningPlatformApp:ContentQuestionNotFound";
+    public const string ContentQuestionOrderInvalid = "EnglishLearningPlatformApp:ContentQuestionOrderInvalid";
 }

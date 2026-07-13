@@ -75,3 +75,15 @@ public class ContentQuestionOptionInput
     [StringLength(ContentConsts.MaxQuestionOptionTextLength)]
     public string? MatchText { get; set; }
 }
+
+public class UpdateContentQuestionInput : AddContentQuestionInput
+{
+}
+
+public class ReorderContentQuestionsInput : ContentConcurrencyInput
+{
+    public Guid SectionId { get; set; }
+
+    [Required]
+    public IReadOnlyList<Guid> QuestionIds { get; set; } = [];
+}

@@ -12,6 +12,7 @@ using Volo.Abp.MultiTenancy;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.Data;
 using Volo.Abp.Validation;
+using Volo.Abp.Domain.Repositories;
 using EnglishLearningPlatformApp.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
@@ -25,6 +26,7 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
     private readonly ICurrentTenant _currentTenant;
     private readonly FakeCurrentPrincipalAccessor _principalAccessor;
     private readonly ConfigurableContentPermissionAuthorizer _authorizationService;
+    private readonly IRepository<ContentQuestionOption, Guid> _optionRepository;
 
     public EfCoreContentAdminAppServiceTests()
     {
@@ -32,6 +34,7 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _principalAccessor = (FakeCurrentPrincipalAccessor)GetRequiredService<ICurrentPrincipalAccessor>();
         _authorizationService = (ConfigurableContentPermissionAuthorizer)GetRequiredService<IContentPermissionAuthorizer>();
+        _optionRepository = GetRequiredService<IRepository<ContentQuestionOption, Guid>>();
     }
 
     [Fact]
@@ -202,6 +205,9 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         AssertPolicy(nameof(ContentAdminAppService.RemoveSectionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
         AssertPolicy(nameof(ContentAdminAppService.ReorderSectionsAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
         AssertPolicy(nameof(ContentAdminAppService.AddQuestionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.UpdateQuestionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.RemoveQuestionAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
+        AssertPolicy(nameof(ContentAdminAppService.ReorderQuestionsAsync), EnglishLearningPlatformAppPermissions.Content.Edit);
     }
 
     [Fact]
@@ -335,14 +341,31 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
 
             var staleStamp = item.ConcurrencyStamp;
             item = await _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp));
+            var questionId = item.Versions.Single().Sections.Single().Questions.Single().Id;
+            using (_authorizationService.DenyAll())
+            {
+                await Should.ThrowAsync<AbpAuthorizationException>(() => _service.UpdateQuestionAsync(item.Id, questionId,
+                    new UpdateContentQuestionInput
+                    {
+                        SectionId = sectionId, Type = QuestionType.TrueFalse, Prompt = "Denied", AnswerDefinitionJson = "false",
+                        ConcurrencyStamp = item.ConcurrencyStamp
+                    }));
+            }
             await Should.ThrowAsync<AbpDbConcurrencyException>(() =>
                 _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, staleStamp)));
+            await Should.ThrowAsync<AbpDbConcurrencyException>(() => _service.ReorderQuestionsAsync(item.Id,
+                new ReorderContentQuestionsInput
+                {
+                    SectionId = sectionId, QuestionIds = [questionId], ConcurrencyStamp = staleStamp
+                }));
         }
 
         using (_currentTenant.Change(tenantTwo))
         {
             await Should.ThrowAsync<EntityNotFoundException>(() =>
                 _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp)));
+            await Should.ThrowAsync<EntityNotFoundException>(() => _service.RemoveQuestionAsync(
+                item.Id, sectionId, item.Versions.Single().Sections.Single().Questions.Single().Id, Stamp(item)));
         }
 
         using (_currentTenant.Change(tenantOne))
@@ -369,6 +392,76 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         }));
     }
 
+    [Fact]
+    public async Task Administrator_Should_Update_Reorder_And_Remove_Questions()
+    {
+        using var tenant = _currentTenant.Change(Guid.NewGuid());
+        var item = await _service.CreateAsync(new CreateContentInput { Type = ContentType.Reading, Title = "Mutations" });
+        item = await AddSection(item, "Passage", "Body");
+        var sectionId = item.Versions.Single().Sections.Single().Id;
+        item = await _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp));
+        item = await _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp, "Second"));
+        item = await _service.AddQuestionAsync(item.Id, QuestionInput(sectionId, item.ConcurrencyStamp, "Third"));
+        var questions = item.Versions.Single().Sections.Single().Questions;
+        var first = questions.Single(x => x.Prompt == "True?");
+        var oldOptionIds = first.Options.Select(x => x.Id).ToList();
+
+        item = await _service.UpdateQuestionAsync(item.Id, first.Id, new UpdateContentQuestionInput
+        {
+            SectionId = sectionId,
+            Type = QuestionType.MultipleSelect,
+            Prompt = "Updated",
+            AnswerDefinitionJson = "[1]",
+            Options = [new ContentQuestionOptionInput { Text = "A" }, new ContentQuestionOptionInput { Text = "B" }],
+            ConcurrencyStamp = item.ConcurrencyStamp
+        });
+        var updated = item.Versions.Single().Sections.Single().Questions.Single(x => x.Id == first.Id);
+        updated.Options.Select(x => x.Id).ShouldAllBe(id => !oldOptionIds.Contains(id));
+        var replacementIds = updated.Options.Select(x => x.Id).ToList();
+        item = await _service.GetAsync(item.Id);
+        item.Versions.Single().Sections.Single().Questions.Single(x => x.Id == first.Id).Options.Select(x => x.Id)
+            .ShouldBe(replacementIds);
+        foreach (var oldOptionId in oldOptionIds)
+        {
+            (await _optionRepository.FindAsync(oldOptionId)).ShouldBeNull();
+        }
+
+        var unchangedIds = item.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position)
+            .Select(x => x.Id).ToList();
+        var unchangedStamp = item.ConcurrencyStamp;
+        foreach (var invalidIds in new[]
+                 {
+                     new[] { unchangedIds[0], unchangedIds[0], unchangedIds[2] },
+                     new[] { unchangedIds[0], unchangedIds[1] },
+                     new[] { unchangedIds[0], unchangedIds[1], Guid.NewGuid() }
+                 })
+        {
+            await Should.ThrowAsync<Volo.Abp.BusinessException>(() => _service.ReorderQuestionsAsync(item.Id,
+                new ReorderContentQuestionsInput
+                {
+                    SectionId = sectionId, QuestionIds = invalidIds, ConcurrencyStamp = item.ConcurrencyStamp
+                }));
+        }
+        item = await _service.GetAsync(item.Id);
+        item.ConcurrencyStamp.ShouldBe(unchangedStamp);
+        item.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position).Select(x => x.Id)
+            .ShouldBe(unchangedIds);
+
+        var reverse = item.Versions.Single().Sections.Single().Questions.OrderByDescending(x => x.Position).Select(x => x.Id).ToList();
+        item = await _service.ReorderQuestionsAsync(item.Id, new ReorderContentQuestionsInput
+        {
+            SectionId = sectionId, QuestionIds = reverse, ConcurrencyStamp = item.ConcurrencyStamp
+        });
+        var remove = item.Versions.Single().Sections.Single().Questions.Single(x => x.Position == 2);
+        item = await _service.RemoveQuestionAsync(item.Id, sectionId, remove.Id, Stamp(item));
+        item.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position).Select(x => x.Position)
+            .ShouldBe(new[] { 1, 2 });
+        var persisted = await _service.GetAsync(item.Id);
+        persisted.Versions.Single().Sections.Single().Questions.OrderBy(x => x.Position).Select(x => x.Position)
+            .ShouldBe(new[] { 1, 2 });
+        (await _optionRepository.GetListAsync()).Select(x => x.Id).ShouldContain(replacementIds[0]);
+    }
+
     private static void AssertPolicy(string methodName, string expectedPolicy)
     {
         typeof(ContentAdminAppService).GetMethod(methodName)!
@@ -387,12 +480,13 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
             ConcurrencyStamp = item.ConcurrencyStamp
         });
 
-    private static AddContentQuestionInput QuestionInput(Guid sectionId, string stamp) => new()
+    private static AddContentQuestionInput QuestionInput(Guid sectionId, string stamp, string prompt = "True?") => new()
     {
         SectionId = sectionId,
         Type = QuestionType.TrueFalse,
-        Prompt = "True?",
+        Prompt = prompt,
         AnswerDefinitionJson = "true",
         ConcurrencyStamp = stamp
     };
+
 }

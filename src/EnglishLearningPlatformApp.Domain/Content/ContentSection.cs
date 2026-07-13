@@ -70,6 +70,41 @@ public class ContentSection : Entity<Guid>, IMultiTenant
         return copy;
     }
 
+    internal void UpdateQuestion(Guid questionId, QuestionType type, string prompt, string answerDefinitionJson,
+        IReadOnlyList<QuestionOptionValue> options, Func<Guid> optionIdGenerator) =>
+        GetQuestion(questionId).Update(type, prompt, answerDefinitionJson, options, optionIdGenerator);
+
+    internal void RemoveQuestion(Guid questionId)
+    {
+        _questions.Remove(GetQuestion(questionId));
+        NormalizeQuestionPositions();
+    }
+
+    internal void ReorderQuestions(IReadOnlyList<Guid> orderedQuestionIds)
+    {
+        if (orderedQuestionIds.Count != _questions.Count ||
+            orderedQuestionIds.Distinct().Count() != _questions.Count ||
+            orderedQuestionIds.Any(id => _questions.All(question => question.Id != id)))
+        {
+            throw new BusinessException(EnglishLearningPlatformAppDomainErrorCodes.ContentQuestionOrderInvalid);
+        }
+
+        for (var index = 0; index < orderedQuestionIds.Count; index++)
+        {
+            GetQuestion(orderedQuestionIds[index]).MoveTo(index + 1);
+        }
+    }
+
+    private ContentQuestion GetQuestion(Guid questionId) =>
+        _questions.SingleOrDefault(x => x.Id == questionId)
+        ?? throw new BusinessException(EnglishLearningPlatformAppDomainErrorCodes.ContentQuestionNotFound);
+
+    private void NormalizeQuestionPositions()
+    {
+        var ordered = _questions.OrderBy(x => x.Position).ToList();
+        for (var index = 0; index < ordered.Count; index++) ordered[index].MoveTo(index + 1);
+    }
+
     private void SetContent(string heading, string body)
     {
         Heading = Check.Length(heading ?? string.Empty, nameof(heading), ContentConsts.MaxSectionHeadingLength)!;

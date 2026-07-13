@@ -109,6 +109,28 @@ public class ContentItem : FullAuditedAggregateRoot<Guid>, IMultiTenant
         return revision;
     }
 
+    public void UpdateQuestion(Guid sectionId, Guid questionId, QuestionType type, string prompt,
+        string answerDefinitionJson, IReadOnlyList<QuestionOptionValue> options, Func<Guid> optionIdGenerator)
+    {
+        EnsureNotArchived();
+        GetDraft().UpdateQuestion(sectionId, questionId, type, prompt, answerDefinitionJson, options, optionIdGenerator);
+        Touch();
+    }
+
+    public void RemoveQuestion(Guid sectionId, Guid questionId)
+    {
+        EnsureNotArchived();
+        GetDraft().RemoveQuestion(sectionId, questionId);
+        Touch();
+    }
+
+    public void ReorderQuestions(Guid sectionId, IReadOnlyList<Guid> orderedQuestionIds)
+    {
+        EnsureNotArchived();
+        GetDraft().ReorderQuestions(sectionId, orderedQuestionIds);
+        Touch();
+    }
+
     public void Archive()
     {
         EnsureNotArchived();
