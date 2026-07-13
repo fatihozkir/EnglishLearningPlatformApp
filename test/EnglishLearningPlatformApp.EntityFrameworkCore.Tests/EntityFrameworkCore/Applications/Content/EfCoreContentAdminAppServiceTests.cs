@@ -301,7 +301,9 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
                         new ContentQuestionOptionInput { Text = "A", MatchText = "Two" },
                         new ContentQuestionOptionInput { Text = "B", MatchText = "One" }
                     ]
-                    : [new ContentQuestionOptionInput { Text = "A" }],
+                    : type is QuestionType.SingleChoice or QuestionType.MultipleSelect or QuestionType.Ordering
+                        ? [new ContentQuestionOptionInput { Text = "A" }, new ContentQuestionOptionInput { Text = "B" }]
+                        : [],
                 ConcurrencyStamp = item.ConcurrencyStamp
             });
         }
@@ -405,6 +407,21 @@ public class EfCoreContentAdminAppServiceTests : EnglishLearningPlatformAppEntit
         var questions = item.Versions.Single().Sections.Single().Questions;
         var first = questions.Single(x => x.Prompt == "True?");
         var oldOptionIds = first.Options.Select(x => x.Id).ToList();
+
+        var beforeInvalidStamp = item.ConcurrencyStamp;
+        await Should.ThrowAsync<Volo.Abp.BusinessException>(() => _service.UpdateQuestionAsync(item.Id, first.Id,
+            new UpdateContentQuestionInput
+            {
+                SectionId = sectionId,
+                Type = QuestionType.SingleChoice,
+                Prompt = "Invalid replacement",
+                AnswerDefinitionJson = "1",
+                Options = [new ContentQuestionOptionInput { Text = "Only one" }],
+                ConcurrencyStamp = item.ConcurrencyStamp
+            }));
+        item = await _service.GetAsync(item.Id);
+        item.ConcurrencyStamp.ShouldBe(beforeInvalidStamp);
+        item.Versions.Single().Sections.Single().Questions.Single(x => x.Id == first.Id).Prompt.ShouldBe("True?");
 
         item = await _service.UpdateQuestionAsync(item.Id, first.Id, new UpdateContentQuestionInput
         {

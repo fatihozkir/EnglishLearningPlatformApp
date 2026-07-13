@@ -96,6 +96,8 @@ public class ContentQuestion : Entity<Guid>, IMultiTenant
                 .WithData(nameof(type), (int)type);
         }
 
+        ValidateStructure(type, options);
+
         var checkedPrompt = Check.NotNullOrWhiteSpace(prompt, nameof(prompt), ContentConsts.MaxQuestionPromptLength);
         var checkedAnswer = ValidateAnswerJson(answerDefinitionJson);
         var replacements = options.Select((value, index) =>
@@ -106,5 +108,18 @@ public class ContentQuestion : Entity<Guid>, IMultiTenant
         AnswerDefinitionJson = checkedAnswer;
         _options.Clear();
         _options.AddRange(replacements);
+    }
+
+    private static void ValidateStructure(QuestionType type, IReadOnlyList<QuestionOptionValue> options)
+    {
+        var requiresOptions = type is QuestionType.SingleChoice or QuestionType.MultipleSelect
+            or QuestionType.Ordering or QuestionType.Matching;
+        if ((requiresOptions && options.Count < 2) || (!requiresOptions && options.Count != 0) ||
+            (type == QuestionType.Matching && options.Any(x => string.IsNullOrWhiteSpace(x.MatchText))))
+        {
+            throw new BusinessException(EnglishLearningPlatformAppDomainErrorCodes.QuestionStructureInvalid)
+                .WithData(nameof(type), type)
+                .WithData("OptionCount", options.Count);
+        }
     }
 }

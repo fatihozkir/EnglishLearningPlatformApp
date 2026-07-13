@@ -75,7 +75,7 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
                 var item = new ContentItem(itemId, tenantOne, ContentType.Listening, Guid.NewGuid(), "Tenant one");
                 var section = item.AddSection(Guid.NewGuid(), "Private", "Tenant passage");
                 item.AddQuestion(section.Id, Guid.NewGuid(), QuestionType.Matching, "Private question", "{\"pairs\":[]}",
-                    [new("A", "One")], Guid.NewGuid);
+                    [new("A", "One"), new("B", "Two")], Guid.NewGuid);
                 return _repository.InsertAsync(item);
             });
             (await _repository.FindAsync(itemId)).ShouldNotBeNull();
@@ -114,7 +114,13 @@ public class EfCoreContentLifecycleTests : EnglishLearningPlatformAppEntityFrame
                 foreach (var type in Enum.GetValues<QuestionType>())
                 {
                     item.AddQuestion(section.Id, Guid.NewGuid(), type, type.ToString(), "{\"serverOnly\":true}",
-                        type == QuestionType.Matching ? [new("A", "One")] : [], Guid.NewGuid);
+                        type switch
+                        {
+                            QuestionType.Matching => [new("A", "One"), new("B", "Two")],
+                            QuestionType.SingleChoice or QuestionType.MultipleSelect or QuestionType.Ordering =>
+                                [new("A"), new("B")],
+                            _ => []
+                        }, Guid.NewGuid);
                 }
 
                 return _repository.InsertAsync(item);

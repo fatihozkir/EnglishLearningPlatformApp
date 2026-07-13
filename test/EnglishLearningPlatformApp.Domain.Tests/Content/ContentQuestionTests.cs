@@ -31,6 +31,44 @@ public class ContentQuestionTests
         questions.Select(x => x.Type).ShouldBe(Enum.GetValues<QuestionType>());
     }
 
+    [Theory]
+    [InlineData(QuestionType.SingleChoice)]
+    [InlineData(QuestionType.MultipleSelect)]
+    [InlineData(QuestionType.Ordering)]
+    [InlineData(QuestionType.Matching)]
+    public void Option_Based_Types_Should_Require_Two_Usable_Options(QuestionType type)
+    {
+        var item = CreateItem(out var sectionId);
+        var options = type == QuestionType.Matching
+            ? new[] { new QuestionOptionValue("A", "One") }
+            : new[] { new QuestionOptionValue("A") };
+
+        Should.Throw<BusinessException>(() => item.AddQuestion(sectionId, Guid.NewGuid(), type, "Prompt", "{}",
+                options, Guid.NewGuid))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.QuestionStructureInvalid);
+    }
+
+    [Theory]
+    [InlineData(QuestionType.TrueFalse)]
+    [InlineData(QuestionType.FillBlank)]
+    [InlineData(QuestionType.ShortAnswer)]
+    public void Non_Option_Types_Should_Reject_Options(QuestionType type)
+    {
+        var item = CreateItem(out var sectionId);
+        Should.Throw<BusinessException>(() => item.AddQuestion(sectionId, Guid.NewGuid(), type, "Prompt", "{}",
+                [new("Unexpected")], Guid.NewGuid))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.QuestionStructureInvalid);
+    }
+
+    [Fact]
+    public void Matching_Should_Require_Right_Side_Text()
+    {
+        var item = CreateItem(out var sectionId);
+        Should.Throw<BusinessException>(() => item.AddQuestion(sectionId, Guid.NewGuid(), QuestionType.Matching,
+                "Prompt", "{}", [new("A", "One"), new("B")], Guid.NewGuid))
+            .Code.ShouldBe(EnglishLearningPlatformAppDomainErrorCodes.QuestionStructureInvalid);
+    }
+
     [Fact]
     public void Invalid_Answer_Json_And_Published_Mutation_Should_Fail()
     {
@@ -65,7 +103,7 @@ public class ContentQuestionTests
             QuestionType.Matching,
             "Match",
             "{\"pairs\":[[\"a\",\"b\"]]}",
-            [new QuestionOptionValue("a", "b")],
+            [new QuestionOptionValue("a", "b"), new QuestionOptionValue("c", "d")],
             Guid.NewGuid);
         item.PublishDraft(DateTime.UtcNow);
 
@@ -73,10 +111,11 @@ public class ContentQuestionTests
         var copy = revision.Sections.Single().Questions.Single();
 
         copy.Id.ShouldNotBe(original.Id);
-        copy.Options.Single().Id.ShouldNotBe(original.Options.Single().Id);
+        copy.Options.OrderBy(x => x.Position).Select(x => x.Id)
+            .ShouldAllBe(id => original.Options.All(source => source.Id != id));
         copy.Prompt.ShouldBe(original.Prompt);
         copy.AnswerDefinitionJson.ShouldBe(original.AnswerDefinitionJson);
-        copy.Options.Single().MatchText.ShouldBe("b");
+        copy.Options.OrderBy(x => x.Position).First().MatchText.ShouldBe("b");
     }
 
     [Fact]
